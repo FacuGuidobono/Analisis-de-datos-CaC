@@ -18,16 +18,31 @@ def explorar_df(df) -> None:
 
 #*Chekeo de valores null en el df
 def check_null_values(df):
-  if df.isnull().sum().values.sum() >0:
-      print('Existen valores NaN\n limpiando..')
-      df = limpiar_nan(df)#quita los NaN
-  print('No existen valores NaN')
-  
-  return df
-      
+    if df.isnull().sum().values.sum() >0:
+        print('Existen valores NaN\n limpiando..')
+        df = limpiar_nan(df)#quita los NaN
+    print('No existen valores NaN')
+    return df
+
+#*buscar columnas identicas (duplicadas)
+
+def search_duplicates(df):
+    
+    columns = df.columns
+# Inicializar una lista para almacenar las columnas que son exactamente iguales
+    duplicates = []
+    # Comparar todas las columnas entre sí
+    for i in range(len(columns)):
+        for j in range(i + 1, len(columns)):
+            if df[columns[i]].equals(df[columns[j]]):
+                duplicates.append((columns[i], columns[j]))
+
+    print("Pares de columnas que son exactamente iguales:", len(duplicates))
+    return duplicates
+
 #*transforma los valores de la col distributors para que se presenten como int
 def transformar_valor(valor):
-    if valor < 2000:
+    if valor < 2000 and valor > 999:
         return valor
     return valor/10
 
@@ -49,9 +64,12 @@ def limpiar_simbolos(df):
 
 #*elimina columnas innecesarias o vacias
 def del_columnas(df,lista_col):
-  for col in lista_col:
-    df.drop(col, axis=1, inplace=True)
-  return df
+    for col in lista_col:
+        if col in df.columns:
+            df.drop(col, axis=1, inplace=True)
+        else:
+           pass
+    return df
 
 #*Crea un configuracion inicial de como se deben mostrar los datos del df
 def setup_df():
@@ -59,7 +77,7 @@ def setup_df():
     pd.set_option('display.max_rows', None)
     pd.set_option('display.float_format', '{:.2f}'.format)
     
-
+#!----------------------------------------------------------------------------------------
 setup_df() #aplicar config
 
 #*Lista con los nombres de las hojas de la base de datos
@@ -78,30 +96,54 @@ dataframes = [pd.read_csv(url) for url in URLs]
 df_sales_in_paraguay, df_distributors_profiles, df_exports_to_paraguay, df_locations_profiles  = dataframes
 
 
+#!----------------------------------------------------------------------------------------
+#! Limpieza df_sales_in_paraguay
 
-# #! Limpieza df_sales_in_paraguay
-explorar_df(df=df_sales_in_paraguay)
 
- #eliminar columnas innecesarias
-df_sales_in_paraguay = check_null_values(df_sales_in_paraguay) #chekear valores NaN
-df_sales_in_paraguay = df_sales_in_paraguay.iloc[:-1].replace('$0.00', 0)
-for columna in df_sales_in_paraguay.columns:
+
+df_sales_in_paraguay = check_null_values(df_sales_in_paraguay)#chekear valores NaN
+df_sales_in_paraguay = df_sales_in_paraguay.drop(df_sales_in_paraguay.index[-1]) #elimina la ultia fila del df
+
+a = search_duplicates(df_sales_in_paraguay)
+if len(a) != 0:
+    df_sales_in_paraguay = del_columnas(df=df_sales_in_paraguay,lista_col=a) #eliminar columnas innecesarias
+
+for columna in df_sales_in_paraguay.columns: 
     if columna == 'distributor':
-       df_sales_in_paraguay['distributor'] = cast_int(df_sales_in_paraguay['distributor'])   
+        df_sales_in_paraguay['distributor'] = cast_int(df_sales_in_paraguay['distributor'])   
     else:  
-         df_sales_in_paraguay[columna] = df_sales_in_paraguay[columna].apply(limpiar_simbolos)
-         df_sales_in_paraguay = df_sales_in_paraguay[columna].astype(float)
-      
-explorar_df(df=df_sales_in_paraguay)
+        df_sales_in_paraguay[columna] = df_sales_in_paraguay[columna].apply(limpiar_simbolos)
+        df_sales_in_paraguay[columna]= df_sales_in_paraguay[columna].astype(float)
+        
+
+#!----------------------------------------------------------------------------------------
+#!Limpieza df_distributors_profiles
 
 
-msg_continuar()
 
+a = search_duplicates(df_distributors_profiles)
+if len(a) != 0:
+    df_distributors_profiles = del_columnas(df=df_distributors_profiles, lista_col=a) #eliminar columnas innecesarias
+print(df_distributors_profiles['id'])
+df_distributors_profiles = check_null_values(df_distributors_profiles) #chekear valores NaN
+df_distributors_profiles['id'] = cast_int(df_distributors_profiles['id']) #transformar a int 'distributor'
+
+for columna in df_distributors_profiles.columns:
+    df_distributors_profiles = df_distributors_profiles.drop(df_distributors_profiles.index[df_distributors_profiles[columna] == 0])
+
+
+#!----------------------------------------------------------------------------------------
 ##!Limpieza df_exports_to_paraguay
 
-explorar_df(df=df_exports_to_paraguay)
 
-df_exports_to_paraguay = del_columnas(df_exports_to_paraguay, ['Columnas','Unnamed: 13','Unnamed: 14']) #eliminar columnas innecesarias
+a = search_duplicates(df_sales_in_paraguay)
+
+if len(a) != 0:
+    a = a + ['Columnas','Unnamed: 13','Unnamed: 14']
+    df_sales_in_paraguay = del_columnas(df=df_sales_in_paraguay,lista_col=a)
+else:
+    df_exports_to_paraguay = del_columnas(df_exports_to_paraguay, ['Columnas','Unnamed: 13','Unnamed: 14']) #eliminar columnas innecesarias
+
 df_exports_to_paraguay = check_null_values(df_exports_to_paraguay) #chekear valores NaN
     
 for columna in df_exports_to_paraguay.columns:
@@ -112,5 +154,24 @@ for columna in df_exports_to_paraguay.columns:
             df_exports_to_paraguay[columna] = df_exports_to_paraguay[columna].astype(float) #transforma a float todos los datos
 
 
-explorar_df(df=df_exports_to_paraguay)
+
+
+#!----------------------------------------------------------------------------------------
+#!Limpieza df_locations_profiles
+
+explorar_df(df=df_locations_profiles)
+msg_continuar()
+print(df_locations_profiles['activities'])
+a = search_duplicates(df_locations_profiles)
+if len(a) != 0:
+    df_locations_profiles = del_columnas(df=df_locations_profiles, lista_col=a) #eliminar columnas innecesarias
+unnamed_columns = [f'Unnamed: {i}' for i in range(5, 26)] #
+df_locations_profiles = del_columnas(df=df_locations_profiles, lista_col=unnamed_columns)
+df_locations_profiles = check_null_values(df_locations_profiles) #chekear valores NaN
+df_locations_profiles['PYid'] = cast_int(df_locations_profiles['PYid']) #transformar a int 'distributor'
+df_locations_profiles['id']  = cast_int(df_locations_profiles['id']) #transformar a int 'distributor'
+
+explorar_df(df=df_locations_profiles)
+
+print(df_locations_profiles['activities'])
 
