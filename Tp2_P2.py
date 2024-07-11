@@ -19,9 +19,9 @@ def explorar_df(df) -> None:
 #*Chekeo de valores null en el df
 def check_null_values(df):
     if df.isnull().sum().values.sum() >0:
-        print('Existen valores NaN\n limpiando..')
         df = limpiar_nan(df)#quita los NaN
-    print('No existen valores NaN')
+    else:
+        pass
     return df
 
 #*buscar columnas identicas (duplicadas)
@@ -95,6 +95,7 @@ dataframes = [pd.read_csv(url) for url in URLs]
 #*desempaquetado de los df
 df_sales_in_paraguay, df_distributors_profiles, df_exports_to_paraguay, df_locations_profiles  = dataframes
 
+#?solo usar sales,export & distributors
 
 #!----------------------------------------------------------------------------------------
 #! Limpieza df_sales_in_paraguay
@@ -124,7 +125,7 @@ for columna in df_sales_in_paraguay.columns:
 a = search_duplicates(df_distributors_profiles)
 if len(a) != 0:
     df_distributors_profiles = del_columnas(df=df_distributors_profiles, lista_col=a) #eliminar columnas innecesarias
-print(df_distributors_profiles['id'])
+
 df_distributors_profiles = check_null_values(df_distributors_profiles) #chekear valores NaN
 df_distributors_profiles['id'] = cast_int(df_distributors_profiles['id']) #transformar a int 'distributor'
 
@@ -159,9 +160,6 @@ for columna in df_exports_to_paraguay.columns:
 #!----------------------------------------------------------------------------------------
 #!Limpieza df_locations_profiles
 
-explorar_df(df=df_locations_profiles)
-msg_continuar()
-print(df_locations_profiles['activities'])
 a = search_duplicates(df_locations_profiles)
 if len(a) != 0:
     df_locations_profiles = del_columnas(df=df_locations_profiles, lista_col=a) #eliminar columnas innecesarias
@@ -171,7 +169,31 @@ df_locations_profiles = check_null_values(df_locations_profiles) #chekear valore
 df_locations_profiles['PYid'] = cast_int(df_locations_profiles['PYid']) #transformar a int 'distributor'
 df_locations_profiles['id']  = cast_int(df_locations_profiles['id']) #transformar a int 'distributor'
 
-explorar_df(df=df_locations_profiles)
 
-print(df_locations_profiles['activities'])
+#!----------------------------------------------------------------------------------------
+#!ANALISIS 
+
+#?VENTAS
+#ordeno el df por distribuidor y los ordeno de forma asc
+df_sales_in_paraguay = df_sales_in_paraguay.sort_values(by='distributor', ascending=True)
+
+#sumo todos los valores despues de 'distributor' y los ordeno de forma asc
+total_sales = df_sales_in_paraguay.iloc[:,1:].sum().sort_values(ascending=True) 
+
+#creo un nuevo df para el total de ventas correspondiente a cada rubro
+total_sales = pd.DataFrame(total_sales/1000000, columns=['Ventas Totales (Millones de $)'])
+
+print(total_sales)
+
+#?EXPORTACIONES
+#ordeno el df por distribuidor y los ordeno de forma asc
+df_exports_to_paraguay = df_exports_to_paraguay.sort_values(by='distributor', ascending=True)
+
+#sumo todos los valores despues de 'distributor' y los ordeno de forma desc
+total_exports = df_exports_to_paraguay.iloc[:,1:].sum().sort_values(ascending=False)
+
+#creo un nuevo df para el total de ventas correspondiente a cada rubro
+total_exports = pd.DataFrame(total_exports/1000000, columns=['Exportaciones Totales (Millones de $)'])
+
+print(total_exports)
 
